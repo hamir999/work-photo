@@ -1,5 +1,5 @@
 // 캐시에서 먼저 열어 속도를 높이고, 뒤에서 새 파일을 받아 둔다 (새 버전은 두 번째 실행부터 보임)
-const CACHE = 'work-photo-v2';
+const CACHE = 'field-photo-v3';
 const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', function (e) {

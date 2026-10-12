@@ -42,21 +42,7 @@ button{font:inherit;color:var(--fg);touch-action:manipulation}
 .preview{margin-top:14px;padding:10px 12px;border:1px dashed var(--line);border-radius:10px;font-size:13px;color:var(--muted);line-height:1.6;word-break:break-all}
 .muted{color:var(--muted);font-size:13px;line-height:1.5}
 .err{color:var(--danger)}
-#cam{position:fixed;inset:0;background:#000;max-width:none;padding:0;min-height:0;z-index:5}
-#video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
-.camtop{position:absolute;top:0;left:0;right:0;padding:calc(10px + env(safe-area-inset-top)) 12px 10px;background:linear-gradient(#000a,#0000);display:flex;gap:8px;align-items:center;color:#fff}
-.camtop .info{flex:1;font-size:14px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.camtop button{color:#fff;border:1px solid #fff6;background:#0006;border-radius:10px;padding:8px 12px;font-size:14px}
-.cambot{position:absolute;left:0;right:0;bottom:0;padding:12px 12px calc(16px + env(safe-area-inset-bottom));background:linear-gradient(#0000,#000b);color:#fff}
-.camchips{display:flex;gap:8px;overflow-x:auto;padding-bottom:12px}
-.camchips .chip{background:#0007;color:#fff;border-color:#fff5;white-space:nowrap}
-.camchips .chip.on{background:#fff;color:#111;border-color:#fff}
-.camrow{display:flex;align-items:center;justify-content:center;position:relative}
-.shutter{width:72px;height:72px;border-radius:50%;border:4px solid #fff;background:#fff3;padding:0}
-.shutter:active{background:#fff}
-.count{position:absolute;right:0;font-size:14px}
-#flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
-#toast{position:fixed;left:50%;bottom:calc(130px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#000c;color:#fff;padding:8px 14px;border-radius:999px;font-size:14px;z-index:9;pointer-events:none;max-width:90%;text-align:center}
+.sub{width:100%;margin-top:10px;padding:16px 8px;font-size:16px}
 </style>
 </head>
 <body>
@@ -80,28 +66,9 @@ button{font:inherit;color:var(--fg);touch-action:manipulation}
 
   <div id="preview" class="preview"></div>
 
-  <button id="bNative" class="primary" type="button">촬영 (기본 카메라)</button>
-  <div class="two">
-    <button id="bApp" class="ghost" type="button">연속 촬영</button>
-    <button id="bPick" class="ghost" type="button">갤러리에서 선택</button>
-  </div>
+  <button id="bNative" class="primary" type="button">촬영</button>
+  <button id="bPick" class="ghost sub" type="button">갤러리에서 선택</button>
   <p id="msg" class="muted"></p>
-</main>
-
-<main id="cam" class="view hidden">
-  <video id="video" playsinline muted autoplay></video>
-  <div id="flash"></div>
-  <div class="camtop">
-    <button id="bBack" type="button">닫기</button>
-    <div class="info" id="camInfo"></div>
-  </div>
-  <div class="cambot">
-    <div id="camChips" class="camchips"></div>
-    <div class="camrow">
-      <button id="bShot" class="shutter" type="button" aria-label="촬영"></button>
-      <div class="count" id="camCount"></div>
-    </div>
-  </div>
 </main>
 
 <main id="settings" class="view hidden">
@@ -110,6 +77,7 @@ button{font:inherit;color:var(--fg);touch-action:manipulation}
   <input id="url" type="url" placeholder="https://script.google.com/macros/s/.../exec">
   <label class="lbl" for="key">비밀 키</label>
   <input id="key" type="password" autocomplete="off">
+  <label class="lbl" style="display:flex;align-items:center;gap:10px;color:var(--fg);font-size:15px;margin-top:18px"><input type="checkbox" id="saveLocal" style="width:20px;height:20px"> 찍은 사진을 폰에도 저장 (갤러리 다운로드 앨범)</label>
   <button id="bTest" class="primary" type="button" style="font-size:16px;padding:14px">연결 확인하고 저장</button>
   <button id="bFlush" class="ghost" type="button" style="width:100%;margin-top:10px;padding:12px">대기 중인 사진 지금 올리기</button>
   <button id="bClrRecent" class="ghost" type="button" style="width:100%;margin-top:10px;padding:12px">최근 건·설명 목록 지우기</button>
@@ -140,7 +108,7 @@ const store = {
   get: function () { try { return JSON.parse(localStorage.getItem('wp_state') || '{}'); } catch (e) { return {}; } },
   set: function (v) { try { localStorage.setItem('wp_state', JSON.stringify(v)); } catch (e) {} }
 };
-const S = Object.assign({ cat: '현장점검', ken: '', desc: '', url: '', key: '', recent: {} }, store.get());
+const S = Object.assign({ cat: '현장점검', ken: '', desc: '', url: '', key: '', recent: {}, saveLocal: true }, store.get());
 if (CATS.indexOf(S.cat) < 0) S.cat = CATS[0];
 function save() { store.set(S); }
 
@@ -163,7 +131,7 @@ function toast(msg) {
   toastTimer = setTimeout(function () { t.classList.add('hidden'); }, 1600);
 }
 function show(id) {
-  ['home', 'cam', 'settings'].forEach(function (v) { $('#' + v).classList.toggle('hidden', v !== id); });
+  ['home', 'settings'].forEach(function (v) { $('#' + v).classList.toggle('hidden', v !== id); });
 }
 
 /* ---------- 최근 목록 ---------- */
@@ -214,7 +182,6 @@ function renderChips() {
   chipRow($('#cats'), CATS, S.cat, function (c) { S.cat = c; save(); renderAll(); });
   chipRow($('#kenChips'), rec(S.cat).ken.slice(0, 6), S.ken, function (v) { S.ken = v; $('#ken').value = v; save(); renderChips(); renderPreview(); });
   chipRow($('#descChips'), descChips(), S.desc, function (v) { setDesc(v); });
-  chipRow($('#camChips'), descChips(), S.desc, function (v) { setDesc(v); });
 }
 function renderPreview() {
   const t = previewText().split('\n');
@@ -223,7 +190,6 @@ function renderPreview() {
   el.appendChild(document.createTextNode(t[0]));
   el.appendChild(document.createElement('br'));
   el.appendChild(document.createTextNode(t[1]));
-  $('#camInfo').textContent = S.cat + ' · ' + (clean(S.ken) || '-') + ' · ' + (clean(S.desc) || '-');
 }
 function renderAll() { renderChips(); renderPreview(); }
 function setDesc(v) {
@@ -275,6 +241,20 @@ async function putQ(snap, blob, ts) {
   await qPut({ id: id, meta: { uid: uid, date: p.date, time: p.time, cat: snap.cat, ken: snap.ken, desc: snap.desc }, blob: blob });
 }
 
+/* ---------- 폰에도 사본 저장 (다운로드 폴더 -> 갤러리의 '다운로드' 앨범) ---------- */
+function saveLocalCopy(blob, snap, ts) {
+  if (!S.saveLocal || !blob) return;
+  try {
+    const p = parts(ts);
+    const name = [p.date, p.time.replace(/:/g, ''), snap.ken || snap.cat, snap.desc].filter(Boolean).join('_') + '.jpg';
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name; a.style.display = 'none';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 15000);
+  } catch (e) {}
+}
+
 /* ---------- 사진 처리 (한 장씩 차례로) ---------- */
 let chain = Promise.resolve(), busy = 0;
 function enqueue(fn) {
@@ -306,7 +286,7 @@ async function fileToBlob(f) {
     return b;
   } finally { URL.revokeObjectURL(url); }
 }
-function addFiles(list) {
+function addFiles(list, fromCamera) {
   const files = Array.from(list || []);
   if (!files.length) return;
   const snap = snapshot();
@@ -314,6 +294,7 @@ function addFiles(list) {
   let done = 0;
   files.forEach(function (f) {
     enqueue(async function () {
+      if (fromCamera) saveLocalCopy(f, snap, f.lastModified || Date.now());
       const blob = await fileToBlob(f);
       if (!blob) throw new Error('blob');
       await putQ(snap, blob, f.lastModified || Date.now());
@@ -325,54 +306,8 @@ function addFiles(list) {
 }
 $('#bNative').onclick = function () { $('#nat').click(); };
 $('#bPick').onclick = function () { $('#pick').click(); };
-$('#nat').onchange = function (e) { const fs = Array.from(e.target.files || []); e.target.value = ''; addFiles(fs); };
+$('#nat').onchange = function (e) { const fs = Array.from(e.target.files || []); e.target.value = ''; addFiles(fs, true); };
 $('#pick').onchange = function (e) { const fs = Array.from(e.target.files || []); e.target.value = ''; addFiles(fs); };
-
-/* ---------- 연속 촬영 (앱 카메라) ---------- */
-let stream = null, session = 0, camOpen = false;
-async function startCam() {
-  stopStream();
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' }, width: { ideal: 2560 }, height: { ideal: 1440 } }, audio: false
-    });
-    const v = $('#video');
-    v.srcObject = stream;
-    await v.play();
-  } catch (e) {
-    toast('카메라를 열지 못했어요. 기본 카메라를 써 주세요');
-  }
-}
-function stopStream() {
-  if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
-}
-$('#bApp').onclick = function () {
-  camOpen = true; session = 0; updCount();
-  show('cam'); renderChips(); renderPreview(); startCam();
-};
-$('#bBack').onclick = function () { camOpen = false; stopStream(); show('home'); renderAll(); };
-document.addEventListener('visibilitychange', function () {
-  if (!camOpen) return;
-  if (document.hidden) stopStream(); else startCam();
-});
-function updCount() { $('#camCount').textContent = session ? session + '장' : ''; }
-$('#bShot').onclick = function () {
-  const v = $('#video');
-  if (!v.videoWidth) { toast('카메라가 아직 준비되지 않았어요'); return; }
-  const snap = snapshot();
-  remember(snap);
-  const c = drawTo(v, v.videoWidth, v.videoHeight);   // 누르는 순간 장면을 바로 복사
-  session++; updCount();
-  try { if (navigator.vibrate) navigator.vibrate(25); } catch (e) {}
-  const fl = $('#flash'); fl.style.transition = 'none'; fl.style.opacity = '0.6';
-  requestAnimationFrame(function () { fl.style.transition = 'opacity .25s'; fl.style.opacity = '0'; });
-  enqueue(async function () {
-    const blob = await toBlob(c); c.width = c.height = 0;
-    if (!blob) throw new Error('blob');
-    await putQ(snap, blob, Date.now());
-    flush();
-  });
-};
 
 /* ---------- 올리기 ---------- */
 function b64(blob) {
@@ -430,7 +365,8 @@ window.addEventListener('online', flush);
 window.addEventListener('pageshow', function () { refreshPend(); flush(); });
 
 /* ---------- 설정 ---------- */
-$('#bSet').onclick = function () { $('#url').value = S.url; $('#key').value = S.key; show('settings'); };
+$('#bSet').onclick = function () { $('#url').value = S.url; $('#key').value = S.key; $('#saveLocal').checked = !!S.saveLocal; show('settings'); };
+$('#saveLocal').onchange = function () { S.saveLocal = $('#saveLocal').checked; save(); };
 $('#bSetBack').onclick = function () { show('home'); };
 $('#bTest').onclick = async function () {
   const url = $('#url').value.trim(), key = $('#key').value.trim();
