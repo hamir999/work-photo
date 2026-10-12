@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2f3e46">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="업무사진">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>업무사진</title>
+<style>
+:root{--bg:#f7f7f5;--fg:#1c1c1c;--muted:#6b6b68;--line:#dededa;--card:#fff;--accent:#2f3e46;--accent-fg:#fff;--danger:#8a3b3b}
+@media (prefers-color-scheme:dark){:root{--bg:#161615;--fg:#ecece8;--muted:#9a9a95;--line:#2b2b29;--card:#1e1e1c;--accent:#d9ddd8;--accent-fg:#161615;--danger:#d48a8a}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;font-size:16px;-webkit-text-size-adjust:100%}
+.view{min-height:100vh;padding:14px 16px calc(24px + env(safe-area-inset-bottom));max-width:520px;margin:0 auto}
+.hidden{display:none!important}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+h1{font-size:18px;font-weight:600;margin:0}
+.hr{display:flex;align-items:center;gap:8px}
+.pill{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 10px}
+.lbl{display:block;font-size:13px;color:var(--muted);margin:14px 0 6px}
+.lbl .opt{font-size:12px;opacity:.8;margin-left:4px}
+input[type=text],input:not([type]),input[type=url],input[type=password]{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--fg);font-size:16px}
+button{font:inherit;color:var(--fg);touch-action:manipulation}
+.primary{width:100%;padding:18px;border:0;border-radius:12px;background:var(--accent);color:var(--accent-fg);font-weight:600;font-size:17px;margin-top:14px}
+.primary:active{opacity:.85}
+.ghost{background:none;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14px}
+.two{display:flex;gap:8px;margin-top:8px}
+.two .ghost{flex:1;padding:14px 8px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips.small{margin-top:8px}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:9px 14px;font-size:15px}
+.chips.small .chip{padding:6px 12px;font-size:14px}
+.chip.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.rowbtn{display:flex;gap:8px}
+.rowbtn input{flex:1;min-width:0}
+.rowbtn .ghost{white-space:nowrap}
+.preview{margin-top:14px;padding:10px 12px;border:1px dashed var(--line);border-radius:10px;font-size:13px;color:var(--muted);line-height:1.6;word-break:break-all}
+.muted{color:var(--muted);font-size:13px;line-height:1.5}
+.err{color:var(--danger)}
+#cam{position:fixed;inset:0;background:#000;max-width:none;padding:0;min-height:0;z-index:5}
+#video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
+.camtop{position:absolute;top:0;left:0;right:0;padding:calc(10px + env(safe-area-inset-top)) 12px 10px;background:linear-gradient(#000a,#0000);display:flex;gap:8px;align-items:center;color:#fff}
+.camtop .info{flex:1;font-size:14px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.camtop button{color:#fff;border:1px solid #fff6;background:#0006;border-radius:10px;padding:8px 12px;font-size:14px}
+.cambot{position:absolute;left:0;right:0;bottom:0;padding:12px 12px calc(16px + env(safe-area-inset-bottom));background:linear-gradient(#0000,#000b);color:#fff}
+.camchips{display:flex;gap:8px;overflow-x:auto;padding-bottom:12px}
+.camchips .chip{background:#0007;color:#fff;border-color:#fff5;white-space:nowrap}
+.camchips .chip.on{background:#fff;color:#111;border-color:#fff}
+.camrow{display:flex;align-items:center;justify-content:center;position:relative}
+.shutter{width:72px;height:72px;border-radius:50%;border:4px solid #fff;background:#fff3;padding:0}
+.shutter:active{background:#fff}
+.count{position:absolute;right:0;font-size:14px}
+#flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+#toast{position:fixed;left:50%;bottom:calc(130px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#000c;color:#fff;padding:8px 14px;border-radius:999px;font-size:14px;z-index:9;pointer-events:none;max-width:90%;text-align:center}
+</style>
+</head>
+<body>
+
+<main id="home" class="view">
+  <header>
+    <h1>업무사진</h1>
+    <div class="hr"><span id="pend" class="pill hidden"></span><button id="bSet" class="ghost" type="button">설정</button></div>
+  </header>
+
+  <div class="lbl">대분류</div>
+  <div id="cats" class="chips"></div>
+
+  <label class="lbl" for="ken">건<span class="opt">출장명, 농가명 등 (선택)</span></label>
+  <div class="rowbtn"><input id="ken" placeholder="예: 충남, 중국출장" autocomplete="off"><button id="kClr" class="ghost" type="button">지우기</button></div>
+  <div id="kenChips" class="chips small"></div>
+
+  <label class="lbl" for="desc">설명<span class="opt">파일 이름에 들어갑니다</span></label>
+  <div class="rowbtn"><input id="desc" placeholder="예: 다인손칼국수_외관" autocomplete="off"><button id="dClr" class="ghost" type="button">지우기</button></div>
+  <div id="descChips" class="chips small"></div>
+
+  <div id="preview" class="preview"></div>
+
+  <button id="bNative" class="primary" type="button">촬영 (기본 카메라)</button>
+  <div class="two">
+    <button id="bApp" class="ghost" type="button">연속 촬영</button>
+    <button id="bPick" class="ghost" type="button">갤러리에서 선택</button>
+  </div>
+  <p id="msg" class="muted"></p>
+</main>
+
+<main id="cam" class="view hidden">
+  <video id="video" playsinline muted autoplay></video>
+  <div id="flash"></div>
+  <div class="camtop">
+    <button id="bBack" type="button">닫기</button>
+    <div class="info" id="camInfo"></div>
+  </div>
+  <div class="cambot">
+    <div id="camChips" class="camchips"></div>
+    <div class="camrow">
+      <button id="bShot" class="shutter" type="button" aria-label="촬영"></button>
+      <div class="count" id="camCount"></div>
+    </div>
+  </div>
+</main>
+
+<main id="settings" class="view hidden">
+  <header><h1>설정</h1><button id="bSetBack" class="ghost" type="button">닫기</button></header>
+  <label class="lbl" for="url">업로드 주소 (Apps Script 웹 앱 URL)</label>
+  <input id="url" type="url" placeholder="https://script.google.com/macros/s/.../exec">
+  <label class="lbl" for="key">비밀 키</label>
+  <input id="key" type="password" autocomplete="off">
+  <button id="bTest" class="primary" type="button" style="font-size:16px;padding:14px">연결 확인하고 저장</button>
+  <button id="bFlush" class="ghost" type="button" style="width:100%;margin-top:10px;padding:12px">대기 중인 사진 지금 올리기</button>
+  <button id="bClrRecent" class="ghost" type="button" style="width:100%;margin-top:10px;padding:12px">최근 건·설명 목록 지우기</button>
+  <p id="status" class="muted"></p>
+</main>
+
+<input id="nat" type="file" accept="image/*" capture="environment" hidden>
+<input id="pick" type="file" accept="image/*" multiple hidden>
+<div id="toast" class="hidden"></div>
+
+<script>
+'use strict';
+const $ = function (s) { return document.querySelector(s); };
+
+/* ---------- 설정값 ---------- */
+const CATS = ['현장점검', '수입감자', '저장고', '기타', '출장'];
+const DESC = {
+  '현장점검': ['전경', '생육', '병해', '서류'],
+  '수입감자': ['선적', '검수', '품질', '서류'],
+  '저장고': ['외관', '내부', '설비', '재고'],
+  '기타': ['외관', '현황', '서류'],
+  '출장': ['외관', '현장', '회의', '서류']
+};
+const MAX_SIDE = 2000, QUALITY = 0.85;
+
+/* ---------- 상태 (폰 안에 저장) ---------- */
+const store = {
+  get: function () { try { return JSON.parse(localStorage.getItem('wp_state') || '{}'); } catch (e) { return {}; } },
+  set: function (v) { try { localStorage.setItem('wp_state', JSON.stringify(v)); } catch (e) {} }
+};
+const S = Object.assign({ cat: '현장점검', ken: '', desc: '', url: '', key: '', recent: {} }, store.get());
+if (CATS.indexOf(S.cat) < 0) S.cat = CATS[0];
+function save() { store.set(S); }
+
+const pad = function (n) { return String(n).padStart(2, '0'); };
+function clean(v) { return String(v || '').replace(/[\\\/:*?"<>|#%\r\n\t]/g, '').replace(/\s+/g, '').slice(0, 30); }
+function parts(ts) {
+  const d = new Date(ts);
+  return {
+    date: '' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()),
+    time: pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds())
+  };
+}
+function snapshot() { return { cat: S.cat, ken: clean(S.ken), desc: clean(S.desc) }; }
+
+let toastTimer;
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg; t.classList.remove('hidden');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { t.classList.add('hidden'); }, 1600);
+}
+function show(id) {
+  ['home', 'cam', 'settings'].forEach(function (v) { $('#' + v).classList.toggle('hidden', v !== id); });
+}
+
+/* ---------- 최근 목록 ---------- */
+function rec(cat) {
+  if (!S.recent[cat]) S.recent[cat] = { ken: [], desc: [] };
+  return S.recent[cat];
+}
+function pushRecent(list, v) {
+  if (!v) return;
+  const i = list.indexOf(v);
+  if (i >= 0) list.splice(i, 1);
+  list.unshift(v);
+  if (list.length > 8) list.length = 8;
+}
+function remember(snap) {
+  const r = rec(snap.cat);
+  pushRecent(r.ken, snap.ken);
+  pushRecent(r.desc, snap.desc);
+  save();
+}
+function descChips() {
+  const base = DESC[S.cat] || [];
+  const extra = rec(S.cat).desc.filter(function (d) { return base.indexOf(d) < 0; }).slice(0, 5);
+  return base.concat(extra);
+}
+
+/* ---------- 화면 그리기 ---------- */
+function chipRow(el, items, current, onPick, cls) {
+  el.innerHTML = '';
+  items.forEach(function (c) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip' + (c === current ? ' on' : '');
+    b.textContent = c;
+    b.onclick = function () { onPick(c); };
+    el.appendChild(b);
+  });
+}
+function previewText() {
+  const s = snapshot();
+  const p = parts(Date.now());
+  const ym = p.date.slice(0, 4) + '-' + p.date.slice(4, 6);
+  const folder = s.cat + '/' + ym + (s.ken ? '_' + s.ken : '');
+  const name = [p.date, s.ken || s.cat, s.desc].filter(Boolean).join('_') + '_01.jpg';
+  return '폴더  ' + folder + '\n이름  ' + name;
+}
+function renderChips() {
+  chipRow($('#cats'), CATS, S.cat, function (c) { S.cat = c; save(); renderAll(); });
+  chipRow($('#kenChips'), rec(S.cat).ken.slice(0, 6), S.ken, function (v) { S.ken = v; $('#ken').value = v; save(); renderChips(); renderPreview(); });
+  chipRow($('#descChips'), descChips(), S.desc, function (v) { setDesc(v); });
+  chipRow($('#camChips'), descChips(), S.desc, function (v) { setDesc(v); });
+}
+function renderPreview() {
+  const t = previewText().split('\n');
+  const el = $('#preview');
+  el.textContent = '';
+  el.appendChild(document.createTextNode(t[0]));
+  el.appendChild(document.createElement('br'));
+  el.appendChild(document.createTextNode(t[1]));
+  $('#camInfo').textContent = S.cat + ' · ' + (clean(S.ken) || '-') + ' · ' + (clean(S.desc) || '-');
+}
+function renderAll() { renderChips(); renderPreview(); }
+function setDesc(v) {
+  S.desc = v; $('#desc').value = v; save(); renderChips(); renderPreview();
+}
+$('#ken').oninput = function () { S.ken = $('#ken').value; save(); renderChips(); renderPreview(); };
+$('#desc').oninput = function () { S.desc = $('#desc').value; save(); renderChips(); renderPreview(); };
+$('#kClr').onclick = function () { S.ken = ''; $('#ken').value = ''; save(); renderChips(); renderPreview(); };
+$('#dClr').onclick = function () { setDesc(''); };
+
+/* ---------- 업로드 대기열 (IndexedDB, 키만 읽어 메모리를 아낌) ---------- */
+let _db = null;
+function dbp() {
+  if (_db) return _db;
+  _db = new Promise(function (res, rej) {
+    const r = indexedDB.open('wp_queue', 1);
+    r.onupgradeneeded = function () { r.result.createObjectStore('q', { keyPath: 'id' }); };
+    r.onsuccess = function () {
+      const db = r.result;
+      db.onclose = function () { _db = null; };
+      db.onversionchange = function () { db.close(); _db = null; };
+      res(db);
+    };
+    r.onerror = function () { _db = null; rej(r.error); };
+  });
+  return _db;
+}
+function req(mode, fn) {
+  return dbp().then(function (db) {
+    return new Promise(function (res, rej) {
+      const t = db.transaction('q', mode);
+      const r = fn(t.objectStore('q'));
+      t.oncomplete = function () { res(r && r.result); };
+      t.onerror = function () { rej(t.error); };
+      t.onabort = function () { rej(t.error); };
+    });
+  });
+}
+const qPut = function (i) { return req('readwrite', function (s) { return s.put(i); }); };
+const qDel = function (id) { return req('readwrite', function (s) { return s.delete(id); }); };
+const qGet = function (id) { return req('readonly', function (s) { return s.get(id); }); };
+const qKeys = function () { return req('readonly', function (s) { return s.getAllKeys(); }); };
+
+let seq = 0;
+async function putQ(snap, blob, ts) {
+  const p = parts(ts);
+  const uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const id = Date.now() * 100 + (seq++ % 100);
+  await qPut({ id: id, meta: { uid: uid, date: p.date, time: p.time, cat: snap.cat, ken: snap.ken, desc: snap.desc }, blob: blob });
+}
+
+/* ---------- 사진 처리 (한 장씩 차례로) ---------- */
+let chain = Promise.resolve(), busy = 0;
+function enqueue(fn) {
+  busy++; refreshPend();
+  chain = chain.then(fn).catch(function () { toast('처리하지 못한 사진이 있어요'); }).then(function () { busy--; refreshPend(); });
+}
+function toBlob(c) { return new Promise(function (r) { c.toBlob(r, 'image/jpeg', QUALITY); }); }
+function drawTo(src, w, h) {
+  const sc = Math.min(1, MAX_SIDE / Math.max(w, h));
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(w * sc)); c.height = Math.max(1, Math.round(h * sc));
+  c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+  return c;
+}
+async function fileToBlob(f) {
+  let bmp = null;
+  try { bmp = await createImageBitmap(f, { imageOrientation: 'from-image' }); } catch (e) { bmp = null; }
+  if (bmp) {
+    const c = drawTo(bmp, bmp.width, bmp.height);
+    if (bmp.close) bmp.close();
+    const b = await toBlob(c); c.width = c.height = 0;
+    return b;
+  }
+  const url = URL.createObjectURL(f);
+  try {
+    const img = await new Promise(function (res, rej) { const i = new Image(); i.onload = function () { res(i); }; i.onerror = rej; i.src = url; });
+    const c = drawTo(img, img.naturalWidth, img.naturalHeight);
+    const b = await toBlob(c); c.width = c.height = 0;
+    return b;
+  } finally { URL.revokeObjectURL(url); }
+}
+function addFiles(list) {
+  const files = Array.from(list || []);
+  if (!files.length) return;
+  const snap = snapshot();
+  remember(snap); renderChips();
+  let done = 0;
+  files.forEach(function (f) {
+    enqueue(async function () {
+      const blob = await fileToBlob(f);
+      if (!blob) throw new Error('blob');
+      await putQ(snap, blob, f.lastModified || Date.now());
+      done++;
+      toast(files.length > 1 ? '대기열 추가 ' + done + '/' + files.length : '저장했어요');
+      flush();
+    });
+  });
+}
+$('#bNative').onclick = function () { $('#nat').click(); };
+$('#bPick').onclick = function () { $('#pick').click(); };
+$('#nat').onchange = function (e) { const fs = Array.from(e.target.files || []); e.target.value = ''; addFiles(fs); };
+$('#pick').onchange = function (e) { const fs = Array.from(e.target.files || []); e.target.value = ''; addFiles(fs); };
+
+/* ---------- 연속 촬영 (앱 카메라) ---------- */
+let stream = null, session = 0, camOpen = false;
+async function startCam() {
+  stopStream();
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 2560 }, height: { ideal: 1440 } }, audio: false
+    });
+    const v = $('#video');
+    v.srcObject = stream;
+    await v.play();
+  } catch (e) {
+    toast('카메라를 열지 못했어요. 기본 카메라를 써 주세요');
+  }
+}
+function stopStream() {
+  if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
+}
+$('#bApp').onclick = function () {
+  camOpen = true; session = 0; updCount();
+  show('cam'); renderChips(); renderPreview(); startCam();
+};
+$('#bBack').onclick = function () { camOpen = false; stopStream(); show('home'); renderAll(); };
+document.addEventListener('visibilitychange', function () {
+  if (!camOpen) return;
+  if (document.hidden) stopStream(); else startCam();
+});
+function updCount() { $('#camCount').textContent = session ? session + '장' : ''; }
+$('#bShot').onclick = function () {
+  const v = $('#video');
+  if (!v.videoWidth) { toast('카메라가 아직 준비되지 않았어요'); return; }
+  const snap = snapshot();
+  remember(snap);
+  const c = drawTo(v, v.videoWidth, v.videoHeight);   // 누르는 순간 장면을 바로 복사
+  session++; updCount();
+  try { if (navigator.vibrate) navigator.vibrate(25); } catch (e) {}
+  const fl = $('#flash'); fl.style.transition = 'none'; fl.style.opacity = '0.6';
+  requestAnimationFrame(function () { fl.style.transition = 'opacity .25s'; fl.style.opacity = '0'; });
+  enqueue(async function () {
+    const blob = await toBlob(c); c.width = c.height = 0;
+    if (!blob) throw new Error('blob');
+    await putQ(snap, blob, Date.now());
+    flush();
+  });
+};
+
+/* ---------- 올리기 ---------- */
+function b64(blob) {
+  return new Promise(function (res, rej) {
+    const f = new FileReader();
+    f.onload = function () { res(String(f.result).split(',')[1]); };
+    f.onerror = rej;
+    f.readAsDataURL(blob);
+  });
+}
+async function sendOne(it) {
+  const body = JSON.stringify(Object.assign({ key: S.key, data: await b64(it.blob) }, it.meta));
+  const ctrl = new AbortController();
+  const t = setTimeout(function () { ctrl.abort(); }, 90000);
+  try {
+    const r = await fetch(S.url, { method: 'POST', body: body, headers: { 'Content-Type': 'text/plain;charset=utf-8' }, signal: ctrl.signal });
+    const j = await r.json();
+    if (!j.ok) { const e = new Error(j.error || '업로드 실패'); e.fatal = j.code === 'auth'; throw e; }
+  } finally { clearTimeout(t); }
+}
+let flushing = false, lastErr = '', retryT = null, pendN = 0;
+async function flush() {
+  if (flushing || !S.url || !S.key) return;
+  flushing = true; lastErr = '';
+  let fatal = false;
+  try {
+    const ids = (await qKeys()).sort(function (a, b) { return a - b; });
+    for (const id of ids) {
+      try {
+        const it = await qGet(id);
+        if (it) await sendOne(it);
+        await qDel(id);
+      } catch (e) { lastErr = e.message || '오류'; fatal = !!e.fatal; break; }
+      refreshPend();
+    }
+  } catch (e) { lastErr = e.message || '오류'; }
+  finally {
+    flushing = false;
+    refreshPend();
+    if (lastErr && !fatal && navigator.onLine !== false) {
+      clearTimeout(retryT); retryT = setTimeout(flush, 15000);
+    }
+  }
+}
+async function refreshPend() {
+  try { pendN = (await qKeys()).length; } catch (e) {}
+  const p = $('#pend');
+  const txt = busy ? '처리 중' : (pendN ? '대기 ' + pendN : '');
+  p.textContent = txt; p.classList.toggle('hidden', !txt);
+  const m = $('#msg');
+  if (lastErr) { m.textContent = '올리지 못한 사진이 있어요. 자동으로 다시 시도합니다. (' + lastErr + ')'; m.className = 'muted err'; }
+  else { m.textContent = pendN ? '업로드 대기 ' + pendN + '장. 인터넷이 연결되면 자동으로 올라갑니다.' : ''; m.className = 'muted'; }
+}
+window.addEventListener('online', flush);
+window.addEventListener('pageshow', function () { refreshPend(); flush(); });
+
+/* ---------- 설정 ---------- */
+$('#bSet').onclick = function () { $('#url').value = S.url; $('#key').value = S.key; show('settings'); };
+$('#bSetBack').onclick = function () { show('home'); };
+$('#bTest').onclick = async function () {
+  const url = $('#url').value.trim(), key = $('#key').value.trim();
+  const st = $('#status');
+  st.className = 'muted'; st.textContent = '확인 중...';
+  try {
+    const r = await fetch(url + (url.indexOf('?') < 0 ? '?' : '&') + 'key=' + encodeURIComponent(key));
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error);
+    S.url = url; S.key = key; save();
+    st.textContent = '연결됐어요. 저장했습니다.';
+    flush();
+  } catch (e) {
+    st.className = 'muted err';
+    st.textContent = '연결하지 못했어요. 주소와 키를 확인해 주세요. (' + e.message + ')';
+  }
+};
+$('#bFlush').onclick = function () { flush(); toast('올리는 중'); };
+$('#bClrRecent').onclick = function () { S.recent = {}; save(); renderAll(); $('#status').textContent = '최근 목록을 지웠어요.'; };
+
+/* ---------- 시작 ---------- */
+$('#ken').value = S.ken; $('#desc').value = S.desc;
+renderAll(); refreshPend();
+if (!S.url || !S.key) { $('#bSet').click(); $('#status').textContent = '처음 한 번만 업로드 주소와 비밀 키를 입력하면 됩니다.'; }
+else flush();
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});
+</script>
+</body>
+</html>
