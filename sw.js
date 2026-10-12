@@ -1,5 +1,5 @@
 // 캐시에서 먼저 열어 속도를 높이고, 뒤에서 새 파일을 받아 둔다 (새 버전은 두 번째 실행부터 보임)
-const CACHE = 'work-photo-v1';
+const CACHE = 'work-photo-v2';
 const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', function (e) {
@@ -23,7 +23,7 @@ self.addEventListener('fetch', function (e) {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
   e.respondWith(
-    caches.match(req).then(function (hit) {
+    caches.match(req, { ignoreSearch: true }).then(function (hit) {
       const net = fetch(req).then(function (res) {
         if (res && res.ok) { const copy = res.clone(); caches.open(CACHE).then(function (c) { c.put(req, copy); }); }
         return res;

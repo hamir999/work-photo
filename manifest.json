@@ -1,8 +1,8 @@
 {
-  "id": "/work-photo/app",
-  "name": "업무사진",
-  "short_name": "업무사진",
-  "start_url": "/work-photo/",
+  "id": "/work-photo/field-photo",
+  "name": "업무 현장사진",
+  "short_name": "현장사진",
+  "start_url": "/work-photo/?app=1",
   "scope": "/work-photo/",
   "display": "standalone",
   "orientation": "any",
