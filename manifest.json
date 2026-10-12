@@ -1,15 +1,25 @@
 {
-  "id": "./work-photo-app",
+  "id": "/work-photo/app",
   "name": "업무사진",
   "short_name": "업무사진",
-  "start_url": "./",
-  "scope": "./",
+  "start_url": "/work-photo/",
+  "scope": "/work-photo/",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#f7f7f5",
+  "background_color": "#fd4c00",
   "theme_color": "#2f3e46",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
   ]
 }
